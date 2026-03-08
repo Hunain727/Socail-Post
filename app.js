@@ -49,6 +49,10 @@ function toggleMenu() {
 
 // ==================== AUTHENTICATION ====================
 
+function generateToken() {
+    return Math.random().toString(36).substr(2) + Date.now().toString(36);
+}
+
 function handleSignup(event) {
     event.preventDefault();
     
@@ -86,8 +90,12 @@ function handleSignup(event) {
         createdAt: new Date().toISOString()
     };
     
+    newUser.accessToken = generateToken();
+    
     users.push(newUser);
     localStorage.setItem('users', JSON.stringify(users));
+    
+    console.log('New user signed up:', newUser);
     
     showToast('Account created successfully! Please login.', 'success');
     
@@ -111,7 +119,10 @@ function handleLogin(event) {
     if (user) {
         // Set current user
         currentUser = user;
-        localStorage.setItem('currentUser', JSON.stringify(user));
+        currentUser.accessToken = generateToken();
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        
+        console.log('User logged in:', user);
         
         showToast(`Welcome back, ${user.name}!`, 'success');
         
@@ -152,6 +163,8 @@ function checkAuthStatus() {
     const navLogout = document.getElementById('navLogout');
     const navPosts = document.getElementById('navPosts');
     const navAddPost = document.getElementById('navAddPost');
+    
+    if (!navLogin || !navSignup || !navLogout || !navPosts || !navAddPost) return;
     
     if (currentUser) {
         navLogin.style.display = 'none';
@@ -230,6 +243,8 @@ function displayPosts() {
     const container = document.getElementById('postsContainer');
     const deleteAllBtn = document.getElementById('deleteAllBtn');
     
+    if (!container) return;
+    
     if (!currentUser) {
         container.innerHTML = `
             <div class="no-posts">
@@ -238,7 +253,7 @@ function displayPosts() {
                 <button onclick="showSection('login')" class="btn btn-primary">Login</button>
             </div>
         `;
-        deleteAllBtn.style.display = 'none';
+        if (deleteAllBtn) deleteAllBtn.style.display = 'none';
         return;
     }
     
@@ -254,11 +269,11 @@ function displayPosts() {
                 <button onclick="showSection('addPost')" class="btn btn-primary">Add Post</button>
             </div>
         `;
-        deleteAllBtn.style.display = 'none';
+        if (deleteAllBtn) deleteAllBtn.style.display = 'none';
         return;
     }
     
-    deleteAllBtn.style.display = 'block';
+    if (deleteAllBtn) deleteAllBtn.style.display = 'block';
 
     container.innerHTML = userPosts.map(post => `
         <div class="post-card">
@@ -343,11 +358,18 @@ function openEditModal(postId) {
         return;
     }
     
-    document.getElementById('editPostId').value = post.id;
-    document.getElementById('editPostTitle').value = post.title;
-    document.getElementById('editPostContent').value = post.content;
-
+    const editPostId = document.getElementById('editPostId');
+    const editPostTitle = document.getElementById('editPostTitle');
+    const editPostContent = document.getElementById('editPostContent');
     const imagePreview = document.getElementById('editPostImagePreview');
+    const editModal = document.getElementById('editModal');
+    
+    if (!editPostId || !editPostTitle || !editPostContent || !imagePreview || !editModal) return;
+    
+    editPostId.value = post.id;
+    editPostTitle.value = post.title;
+    editPostContent.value = post.content;
+
     if (post.imageUrl) {
         imagePreview.src = post.imageUrl;
         imagePreview.style.display = 'block';
@@ -355,15 +377,20 @@ function openEditModal(postId) {
         imagePreview.style.display = 'none';
     }
 
-    document.getElementById('editModal').style.display = 'block';
+    editModal.style.display = 'block';
 }
 
 function closeEditModal() {
-    document.getElementById('editModal').style.display = 'none';
-    document.getElementById('editPostForm').reset();
+    const editModal = document.getElementById('editModal');
+    const editPostForm = document.getElementById('editPostForm');
     const imagePreview = document.getElementById('editPostImagePreview');
-    imagePreview.style.display = 'none';
-    imagePreview.src = '';
+    
+    if (editModal) editModal.style.display = 'none';
+    if (editPostForm) editPostForm.reset();
+    if (imagePreview) {
+        imagePreview.style.display = 'none';
+        imagePreview.src = '';
+    }
 }
 
 async function handleUpdatePost(event) {
@@ -409,6 +436,7 @@ async function handleUpdatePost(event) {
 
 function showToast(message, type = 'success') {
     const toast = document.getElementById('toast');
+    if (!toast) return;
     toast.textContent = message;
     toast.className = `toast ${type} show`;
     
@@ -453,12 +481,12 @@ function formatDate(dateString) {
 }
 
 // Close modal when clicking outside
-window.onclick = function(event) {
+document.addEventListener('click', function(event) {
     const modal = document.getElementById('editModal');
-    if (event.target === modal) {
+    if (modal && event.target === modal) {
         closeEditModal();
     }
-}
+});
 
 // Handle browser back/forward buttons
 window.addEventListener('hashchange', () => {
